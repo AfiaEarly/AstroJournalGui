@@ -57,6 +57,7 @@ public final class Theme {
     public static final Font FONT_SMALL = new Font(BODY_FAMILY, Font.PLAIN, 12);
     public static final Font FONT_BUTTON = new Font(BODY_FAMILY, Font.PLAIN, 15);
     public static final Font FONT_TAB = new Font(BODY_FAMILY, Font.BOLD, 16);
+    public static final Font FONT_TABLE_HEADER = new Font(BODY_FAMILY, Font.BOLD, 14);
 
     private static final int BUTTON_RADIUS = 10;
 
@@ -131,7 +132,7 @@ public final class Theme {
         UIManager.put("Table.showGrid", Boolean.TRUE);
         UIManager.put("TableHeader.background", PAPER_SHADE);
         UIManager.put("TableHeader.foreground", INK);
-        UIManager.put("TableHeader.font", FONT_HEADING);
+        UIManager.put("TableHeader.font", FONT_TABLE_HEADER);
 
         UIManager.put("ScrollPane.background", PAPER);
         UIManager.put("Viewport.background", PAPER);
@@ -182,6 +183,17 @@ public final class Theme {
     public static JPanel transparentPanel(LayoutManager layout) {
         JPanel panel = new JPanel(layout);
         panel.setOpaque(false);
+        return panel;
+    }
+
+    public static JPanel paperPanel() {
+        return paperPanel(null);
+    }
+
+    public static JPanel paperPanel(LayoutManager layout) {
+        JPanel panel = new JPanel(layout);
+        panel.setOpaque(true);
+        panel.setBackground(PAPER);
         return panel;
     }
 
@@ -272,13 +284,16 @@ public final class Theme {
         JButton button = new JButton(text) {
             @Override
             protected void paintComponent(Graphics g) {
-                paintFlat(g, this, getBackground(), outline);
+                boolean enabled = isEnabled();
+                paintFlat(g, this, enabled ? getBackground() : PAPER_SHADE, enabled ? outline : PAPER_BORDER);
                 super.paintComponent(g);
             }
         };
         styleButton(button, font, padding);
         button.setBackground(base);
         button.setForeground(foreground);
+        button.addPropertyChangeListener("enabled",
+                event -> button.setForeground(button.isEnabled() ? foreground : INK_MUTED));
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent event) {

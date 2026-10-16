@@ -3,6 +3,7 @@ package astrojournal;
 import astrojournal.data.ObservationRepository;
 import astrojournal.data.SettingsStore;
 import astrojournal.data.TextFileStore;
+import astrojournal.service.ImageManager;
 import astrojournal.service.ObservationService;
 import astrojournal.ui.MainFrame;
 import astrojournal.ui.theme.Theme;
@@ -33,8 +34,9 @@ public final class Main {
 
             ObservationService service = new ObservationService(
                     new ObservationRepository(new TextFileStore(DATA_DIRECTORY.resolve("observations.txt"))));
+            ImageManager imageManager = new ImageManager(DATA_DIRECTORY.resolve("images"));
 
-            MainFrame frame = new MainFrame(service, storedBackground(settings),
+            MainFrame frame = new MainFrame(service, imageManager, storedBackground(settings),
                     chosen -> saveBackground(settings, chosen));
             frame.setVisible(true);
         } catch (IOException e) {

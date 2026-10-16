@@ -1,5 +1,7 @@
 package astrojournal.service;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +19,18 @@ public class ImageManager {
         String fileName = uniqueFileName(source.getFileName().toString());
         Files.copy(source, resolve(fileName));
         return fileName;
+    }
+
+    public BufferedImage load(String fileName) throws IOException {
+        Path file = resolve(fileName);
+        if (Files.notExists(file)) {
+            return null;
+        }
+        BufferedImage image = ImageIO.read(file.toFile());
+        if (image == null) {
+            throw new IOException(fileName + " is not a supported image");
+        }
+        return image;
     }
 
     public Path resolve(String fileName) {

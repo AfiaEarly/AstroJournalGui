@@ -1,6 +1,8 @@
 package astrojournal.ui;
 
 import astrojournal.model.CelestialType;
+import astrojournal.model.Observation;
+import astrojournal.service.ImageManager;
 import astrojournal.service.ObservationService;
 import astrojournal.ui.theme.Theme;
 
@@ -32,22 +34,32 @@ public class MainFrame extends JFrame {
     private static final String ALL_TYPES = "All types";
     private static final String COVER_CARD = "cover";
     private static final String BOOK_CARD = "book";
+    private static final int MINIMUM_HEIGHT = 620;
+    private static final int PAGE_CHROME_WIDTH = 300;
 
     private final ObservationService service;
+    private final ImageManager imageManager;
     private final Consumer<Path> backgroundSaver;
     private final BackgroundPanel backgroundPanel = new BackgroundPanel();
     private final CardLayout cards = new CardLayout();
     private final JLabel statusLabel = Theme.muted("");
+    private final ObservationTablePanel journalTable = new ObservationTablePanel();
+    private final JComboBox<String> typeFilter = new JComboBox<>();
+    private final JToggleButton sortToggle = Theme.toggleButton("Newest first");
+    private final JButton editButton = Theme.secondaryButton("Edit");
+    private final JButton deleteButton = Theme.secondaryButton("Delete");
+    private boolean updatingFilterOptions;
+    private JPanel toolbar;
 
-    public MainFrame(ObservationService service, Path backgroundImage, Consumer<Path> backgroundSaver) {
+    public MainFrame(ObservationService service, ImageManager imageManager, Path backgroundImage,
+            Consumer<Path> backgroundSaver) {
         this.service = service;
+        this.imageManager = imageManager;
         this.backgroundSaver = backgroundSaver;
 
         setTitle("AstroJournal");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(900, 620));
         setSize(1120, 720);
-        setLocationRelativeTo(null);
 
         backgroundPanel.setLayout(cards);
         backgroundPanel.setBorder(Theme.padding(Theme.SPACE_LG));
@@ -55,16 +67,63 @@ public class MainFrame extends JFrame {
         backgroundPanel.add(buildBookView(), BOOK_CARD);
 
         setContentPane(backgroundPanel);
+        setMinimumSize(new Dimension(toolbar.getPreferredSize().width + PAGE_CHROME_WIDTH, MINIMUM_HEIGHT));
+        setLocationRelativeTo(null);
 
         if (backgroundImage != null) {
             backgroundPanel.setBackgroundImage(backgroundImage);
         }
-        refreshStatus();
+        wireJournalControls();
+        refreshData();
         showCover();
+    }
+
+    private void wireJournalControls() {
+        editButton.setEnabled(false);
+        deleteButton.setEnabled(false);
+
+        journalTable.addSelectionListener(selectedCount -> {
+            editButton.setEnabled(selectedCount == 1);
+            deleteButton.setEnabled(selectedCount >= 1);
+        });
+        journalTable.addSortListener(() -> {
+            syncSortToggle(journalTable.isSortedByDateDescending());
+            refreshStatus();
+        });
+        journalTable.addOpenListener(this::showObservation);
+        typeFilter.addActionListener(event -> {
+            if (!updatingFilterOptions) {
+                journalTable.setTypeFilter(selectedTypeFilter());
+                refreshStatus();
+            }
+        });
+        sortToggle.addItemListener(event -> {
+            boolean descending = sortToggle.isSelected();
+            sortToggle.setText(descending ? "Newest first" : "Oldest first");
+            if (journalTable.isSortedByDateDescending() != descending) {
+                journalTable.setSortDescendingByDate(descending);
+            }
+            refreshStatus();
+        });
+        syncSortToggle(true);
+    }
+
+    private void syncSortToggle(boolean descending) {
+        sortToggle.setText(descending ? "Newest first" : "Oldest first");
+        sortToggle.setSelected(descending);
+    }
+
+    private String selectedTypeFilter() {
+        Object selected = typeFilter.getSelectedItem();
+        return selected == null || ALL_TYPES.equals(selected) ? null : selected.toString();
     }
 
     private void showCover() {
         cards.show(backgroundPanel, COVER_CARD);
+    }
+
+    private void showObservation(Observation observation) {
+        ObservationDetailDialog.open(this, observation, imageManager);
     }
 
     private void showBook() {
@@ -161,26 +220,23 @@ public class MainFrame extends JFrame {
 
     private JPanel buildToolbar() {
         JButton addButton = Theme.primaryButton("Add");
-        JButton editButton = Theme.secondaryButton("Edit");
-        JButton deleteButton = Theme.secondaryButton("Delete");
-        JComboBox<String> typeFilter = new JComboBox<>(filterOptions());
-        JToggleButton sortToggle = Theme.toggleButton("Newest first");
 
         addButton.addActionListener(event -> comingSoon("Adding observations"));
         editButton.addActionListener(event -> comingSoon("Editing observations"));
         deleteButton.addActionListener(event -> comingSoon("Deleting observations"));
 
-        JPanel toolbar = Theme.transparentPanel(new FlowLayout(FlowLayout.CENTER, Theme.SPACE_SM, 0));
-        toolbar.setBorder(Theme.padding(Theme.SPACE_SM, Theme.SPACE_XL, Theme.SPACE_MD, Theme.SPACE_XL));
-        toolbar.add(addButton);
-        toolbar.add(editButton);
-        toolbar.add(deleteButton);
-        toolbar.add(Box.createHorizontalStrut(Theme.SPACE_LG));
-        toolbar.add(Theme.label("Filter"));
-        toolbar.add(typeFilter);
-        toolbar.add(Box.createHorizontalStrut(Theme.SPACE_MD));
-        toolbar.add(Theme.label("Sort"));
-        toolbar.add(sortToggle);
+        JPanel bar = Theme.transparentPanel(new FlowLayout(FlowLayout.CENTER, Theme.SPACE_SM, 0));
+        bar.setBorder(Theme.padding(Theme.SPACE_SM, Theme.SPACE_XL, Theme.SPACE_MD, Theme.SPACE_XL));
+        bar.add(addButton);
+        bar.add(editButton);
+        bar.add(deleteButton);
+        bar.add(Box.createHorizontalStrut(Theme.SPACE_LG));
+        bar.add(Theme.label("Filter"));
+        bar.add(typeFilter);
+        bar.add(Box.createHorizontalStrut(Theme.SPACE_MD));
+        bar.add(Theme.label("Sort"));
+        bar.add(sortToggle);
+        toolbar = bar;
         return toolbar;
     }
 
@@ -189,7 +245,7 @@ public class MainFrame extends JFrame {
         tabs.setOpaque(false);
         tabs.setFont(Theme.FONT_TAB);
         tabs.setBorder(Theme.padding(Theme.SPACE_MD, Theme.SPACE_MD, 0, Theme.SPACE_MD));
-        tabs.addTab("Journal", placeholder("No observations yet", "Your recorded nights will appear here."));
+        tabs.addTab("Journal", journalTable);
         tabs.addTab("Stats", placeholder("No statistics yet", "Counts per celestial type will appear here."));
         tabs.addTab("Streaks", placeholder("No streaks yet", "Your observation streak will appear here."));
         updateTabColors(tabs);
@@ -241,22 +297,49 @@ public class MainFrame extends JFrame {
         backgroundPanel.setBackgroundImage(chosen);
     }
 
-    private void refreshStatus() {
-        int count = service.all().size();
-        statusLabel.setText(count + (count == 1 ? " observation recorded" : " observations recorded"));
+    private void refreshData() {
+        List<Observation> observations = service.all();
+        journalTable.setObservations(observations);
+        updateFilterOptions(observations);
+        refreshStatus();
     }
 
-    private void comingSoon(String feature) {
-        JOptionPane.showMessageDialog(this, feature + " is not available yet.",
-                "AstroJournal", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private static String[] filterOptions() {
+    private void updateFilterOptions(List<Observation> observations) {
         List<String> options = new ArrayList<>();
         options.add(ALL_TYPES);
         for (CelestialType type : CelestialType.standard()) {
             options.add(type.label());
         }
-        return options.toArray(String[]::new);
+        for (Observation observation : observations) {
+            String type = observation.celestialType();
+            if (type != null && !type.isBlank()
+                    && options.stream().noneMatch(option -> option.equalsIgnoreCase(type))) {
+                options.add(type);
+            }
+        }
+
+        String selected = (String) typeFilter.getSelectedItem();
+        updatingFilterOptions = true;
+        typeFilter.removeAllItems();
+        for (String option : options) {
+            typeFilter.addItem(option);
+        }
+        typeFilter.setSelectedItem(options.contains(selected) ? selected : ALL_TYPES);
+        updatingFilterOptions = false;
+    }
+
+    private void refreshStatus() {
+        int total = service.all().size();
+        int visible = journalTable.visibleRowCount();
+        if (visible == total) {
+            statusLabel.setText(total + (total == 1 ? " observation recorded" : " observations recorded"));
+            return;
+        }
+        statusLabel.setText("Showing " + visible + " of " + total + " observations");
+    }
+
+    private void comingSoon(String feature) {
+        JOptionPane.showMessageDialog(this, feature + " is not available yet.",
+                "AstroJournal", JOptionPane.INFORMATION_MESSAGE);
     }
 }
