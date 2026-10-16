@@ -39,7 +39,7 @@ public class PhotoPanel extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(PREFERRED_WIDTH, PREFERRED_HEIGHT);
+        return isPreferredSizeSet() ? super.getPreferredSize() : new Dimension(PREFERRED_WIDTH, PREFERRED_HEIGHT);
     }
 
     @Override

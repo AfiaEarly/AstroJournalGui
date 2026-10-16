@@ -22,13 +22,16 @@ public class ImageManager {
     }
 
     public BufferedImage load(String fileName) throws IOException {
-        Path file = resolve(fileName);
+        return read(resolve(fileName));
+    }
+
+    public BufferedImage read(Path file) throws IOException {
         if (Files.notExists(file)) {
             return null;
         }
         BufferedImage image = ImageIO.read(file.toFile());
         if (image == null) {
-            throw new IOException(fileName + " is not a supported image");
+            throw new IOException(file.getFileName() + " is not a supported image");
         }
         return image;
     }

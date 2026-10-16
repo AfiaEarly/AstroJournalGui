@@ -1,8 +1,11 @@
 package astrojournal.ui.theme;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
@@ -69,6 +72,9 @@ public final class Theme {
 
     private static final Border BUTTON_PADDING = new EmptyBorder(SPACE_MD - 2, SPACE_LG, SPACE_MD - 2, SPACE_LG);
     private static final Border SMALL_BUTTON_PADDING = new EmptyBorder(SPACE_SM - 2, SPACE_MD, SPACE_SM - 2, SPACE_MD);
+    private static final Border FIELD_PADDING = new EmptyBorder(SPACE_XS, SPACE_SM, SPACE_XS, SPACE_SM);
+    private static final Border FIELD_BORDER = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(PAPER_BORDER), FIELD_PADDING);
 
     private Theme() {
     }
@@ -219,6 +225,32 @@ public final class Theme {
 
     public static JLabel coverSubtitle(String text) {
         return styledLabel(text, FONT_BODY, COVER_TEXT);
+    }
+
+    public static JTextField textField() {
+        return textField(0);
+    }
+
+    public static JTextField textField(int columns) {
+        JTextField field = new JTextField(columns);
+        field.setFont(FONT_BODY);
+        field.setForeground(INK);
+        field.setBackground(PAPER_ALT);
+        field.setCaretColor(INK);
+        field.setBorder(FIELD_BORDER);
+        return field;
+    }
+
+    public static JTextArea textArea(int rows, int columns) {
+        JTextArea area = new JTextArea(rows, columns);
+        area.setFont(FONT_BODY);
+        area.setForeground(INK);
+        area.setBackground(PAPER_ALT);
+        area.setCaretColor(INK);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setBorder(FIELD_PADDING);
+        return area;
     }
 
     public static JButton primaryButton(String text) {

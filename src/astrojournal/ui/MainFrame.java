@@ -10,20 +10,19 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.JToggleButton;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagLayout;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +49,7 @@ public class MainFrame extends JFrame {
     private final JButton deleteButton = Theme.secondaryButton("Delete");
     private boolean updatingFilterOptions;
     private JPanel toolbar;
+    private JTabbedPane tabs;
 
     public MainFrame(ObservationService service, ImageManager imageManager, Path backgroundImage,
             Consumer<Path> backgroundSaver) {
@@ -221,9 +221,9 @@ public class MainFrame extends JFrame {
     private JPanel buildToolbar() {
         JButton addButton = Theme.primaryButton("Add");
 
-        addButton.addActionListener(event -> comingSoon("Adding observations"));
-        editButton.addActionListener(event -> comingSoon("Editing observations"));
-        deleteButton.addActionListener(event -> comingSoon("Deleting observations"));
+        addButton.addActionListener(event -> addObservation());
+        editButton.addActionListener(event -> editObservation());
+        deleteButton.addActionListener(event -> deleteObservation());
 
         JPanel bar = Theme.transparentPanel(new FlowLayout(FlowLayout.CENTER, Theme.SPACE_SM, 0));
         bar.setBorder(Theme.padding(Theme.SPACE_SM, Theme.SPACE_XL, Theme.SPACE_MD, Theme.SPACE_XL));
@@ -241,7 +241,7 @@ public class MainFrame extends JFrame {
     }
 
     private JTabbedPane buildTabs() {
-        JTabbedPane tabs = new JTabbedPane();
+        tabs = new JTabbedPane();
         tabs.setOpaque(false);
         tabs.setFont(Theme.FONT_TAB);
         tabs.setBorder(Theme.padding(Theme.SPACE_MD, Theme.SPACE_MD, 0, Theme.SPACE_MD));
@@ -284,17 +284,72 @@ public class MainFrame extends JFrame {
     }
 
     private void chooseBackground() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Choose a background image");
-        chooser.setAcceptAllFileFilterUsed(false);
-        chooser.setFileFilter(
-                new FileNameExtensionFilter("Images (png, jpg, gif, bmp)", "png", "jpg", "jpeg", "gif", "bmp"));
-        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+        ImageChooser.choose(this, "Choose a background image").ifPresent(chosen -> {
+            backgroundSaver.accept(chosen);
+            backgroundPanel.setBackgroundImage(chosen);
+        });
+    }
+
+    private void addObservation() {
+        ObservationFormDialog.open(this, null, imageManager).ifPresent(observation -> {
+            try {
+                service.add(observation);
+            } catch (IOException e) {
+                reportStorageError("save", e);
+                return;
+            }
+            refreshData();
+            showJournalTab();
+        });
+    }
+
+    private void editObservation() {
+        Observation selected = journalTable.selectedObservations().stream().findFirst().orElse(null);
+        if (selected == null) {
             return;
         }
-        Path chosen = chooser.getSelectedFile().toPath();
-        backgroundSaver.accept(chosen);
-        backgroundPanel.setBackgroundImage(chosen);
+        ObservationFormDialog.open(this, selected, imageManager).ifPresent(observation -> {
+            try {
+                service.update(observation);
+            } catch (IOException e) {
+                reportStorageError("save", e);
+                return;
+            }
+            refreshData();
+            showJournalTab();
+        });
+    }
+
+    private void deleteObservation() {
+        List<Observation> selected = journalTable.selectedObservations();
+        if (selected.isEmpty()) {
+            return;
+        }
+        String question = selected.size() == 1
+                ? "Delete this observation?"
+                : "Delete these " + selected.size() + " observations?";
+        int choice = JOptionPane.showConfirmDialog(this, question + "\nThis cannot be undone.",
+                "Delete observations", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) {
+            return;
+        }
+        try {
+            service.delete(selected.stream().map(Observation::id).toList());
+        } catch (IOException e) {
+            reportStorageError("delete", e);
+            return;
+        }
+        refreshData();
+        showJournalTab();
+    }
+
+    private void showJournalTab() {
+        tabs.setSelectedIndex(0);
+    }
+
+    private void reportStorageError(String action, IOException cause) {
+        JOptionPane.showMessageDialog(this, "Could not " + action + " the observation:\n" + cause.getMessage(),
+                "AstroJournal", JOptionPane.ERROR_MESSAGE);
     }
 
     private void refreshData() {
@@ -336,10 +391,5 @@ public class MainFrame extends JFrame {
             return;
         }
         statusLabel.setText("Showing " + visible + " of " + total + " observations");
-    }
-
-    private void comingSoon(String feature) {
-        JOptionPane.showMessageDialog(this, feature + " is not available yet.",
-                "AstroJournal", JOptionPane.INFORMATION_MESSAGE);
     }
 }
