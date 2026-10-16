@@ -1,0 +1,2 @@
+# id|date|time|objectName|type|location|equipment|imageFile|notes
+1|2026-10-16|20:15|Milky Way|Galaxy|South|Phone Camera|MilkyWay.jpg|It looked so breathtaking!
