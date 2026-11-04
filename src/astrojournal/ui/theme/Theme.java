@@ -55,6 +55,7 @@ public final class Theme {
             BODY_FAMILY);
 
     public static final Font FONT_TITLE = new Font(TITLE_FAMILY, Font.BOLD, 30);
+    public static final Font FONT_DISPLAY = new Font(BODY_FAMILY, Font.BOLD, 38);
     public static final Font FONT_HEADING = new Font(BODY_FAMILY, Font.BOLD, 18);
     public static final Font FONT_BODY = new Font(BODY_FAMILY, Font.PLAIN, 15);
     public static final Font FONT_SMALL = new Font(BODY_FAMILY, Font.PLAIN, 12);
@@ -209,6 +210,14 @@ public final class Theme {
 
     public static JLabel heading(String text) {
         return styledLabel(text, FONT_HEADING, INK);
+    }
+
+    public static JLabel display(String text) {
+        return styledLabel(text, FONT_DISPLAY, INK);
+    }
+
+    public static JLabel tableHeader(String text) {
+        return styledLabel(text, FONT_TABLE_HEADER, INK_MUTED);
     }
 
     public static JLabel label(String text) {

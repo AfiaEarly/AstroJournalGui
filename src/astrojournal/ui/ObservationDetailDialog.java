@@ -12,6 +12,7 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -29,8 +30,14 @@ import java.io.IOException;
 
 public class ObservationDetailDialog extends JDialog {
 
+    public enum Action {
+        CLOSE, EDIT, DELETE
+    }
+
     private static final int NOTES_HEIGHT = 84;
     private static final String NO_VALUE = "\u2014";
+
+    private Action action = Action.CLOSE;
 
     private ObservationDetailDialog(Window owner, Observation observation, ImageManager imageManager) {
         super(owner, observation.objectName(), ModalityType.APPLICATION_MODAL);
@@ -42,9 +49,11 @@ public class ObservationDetailDialog extends JDialog {
         setLocationRelativeTo(owner);
     }
 
-    public static void open(Component parent, Observation observation, ImageManager imageManager) {
+    public static Action open(Component parent, Observation observation, ImageManager imageManager) {
         Window owner = SwingUtilities.getWindowAncestor(parent);
-        new ObservationDetailDialog(owner, observation, imageManager).setVisible(true);
+        ObservationDetailDialog dialog = new ObservationDetailDialog(owner, observation, imageManager);
+        dialog.setVisible(true);
+        return dialog.action;
     }
 
     private JPanel buildContent(Observation observation, ImageManager imageManager) {
@@ -69,15 +78,36 @@ public class ObservationDetailDialog extends JDialog {
         text.add(Box.createVerticalStrut(Theme.SPACE_XS));
         text.add(subtitle);
 
+        JButton editButton = Theme.primaryButton("Edit");
+        editButton.addActionListener(event -> closeWith(Action.EDIT));
+        JButton deleteButton = Theme.secondaryButton("Delete");
+        deleteButton.addActionListener(event -> confirmDelete());
         JButton closeButton = Theme.secondaryButton("Close");
         closeButton.addActionListener(event -> dispose());
-        JPanel actions = Theme.transparentPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+
+        JPanel actions = Theme.transparentPanel(new FlowLayout(FlowLayout.RIGHT, Theme.SPACE_SM, 0));
+        actions.add(editButton);
+        actions.add(deleteButton);
         actions.add(closeButton);
 
         JPanel header = Theme.transparentPanel(new BorderLayout());
         header.add(text, BorderLayout.WEST);
         header.add(actions, BorderLayout.EAST);
         return header;
+    }
+
+    private void confirmDelete() {
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Delete this observation?\nThis cannot be undone.",
+                "Delete observation", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (choice == JOptionPane.OK_OPTION) {
+            closeWith(Action.DELETE);
+        }
+    }
+
+    private void closeWith(Action result) {
+        action = result;
+        dispose();
     }
 
     private PhotoPanel buildPhoto(Observation observation, ImageManager imageManager) {

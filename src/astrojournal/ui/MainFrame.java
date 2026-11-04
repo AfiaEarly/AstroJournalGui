@@ -43,10 +43,11 @@ public class MainFrame extends JFrame {
     private final CardLayout cards = new CardLayout();
     private final JLabel statusLabel = Theme.muted("");
     private final ObservationTablePanel journalTable = new ObservationTablePanel();
+    private final StreakBanner streakBanner = new StreakBanner();
+    private final StatsPanel statsPanel = new StatsPanel();
+    private final StreakPanel streakPanel = new StreakPanel();
     private final JComboBox<String> typeFilter = new JComboBox<>();
     private final JToggleButton sortToggle = Theme.toggleButton("Newest first");
-    private final JButton editButton = Theme.secondaryButton("Edit");
-    private final JButton deleteButton = Theme.secondaryButton("Delete");
     private boolean updatingFilterOptions;
     private JPanel toolbar;
     private JTabbedPane tabs;
@@ -79,13 +80,6 @@ public class MainFrame extends JFrame {
     }
 
     private void wireJournalControls() {
-        editButton.setEnabled(false);
-        deleteButton.setEnabled(false);
-
-        journalTable.addSelectionListener(selectedCount -> {
-            editButton.setEnabled(selectedCount == 1);
-            deleteButton.setEnabled(selectedCount >= 1);
-        });
         journalTable.addSortListener(() -> {
             syncSortToggle(journalTable.isSortedByDateDescending());
             refreshStatus();
@@ -123,7 +117,12 @@ public class MainFrame extends JFrame {
     }
 
     private void showObservation(Observation observation) {
-        ObservationDetailDialog.open(this, observation, imageManager);
+        switch (ObservationDetailDialog.open(this, observation, imageManager)) {
+            case EDIT -> editObservation(observation);
+            case DELETE -> deleteObservation(observation);
+            case CLOSE -> {
+            }
+        }
     }
 
     private void showBook() {
@@ -186,6 +185,12 @@ public class MainFrame extends JFrame {
     private JPanel buildTopArea() {
         JPanel top = Theme.transparentPanel(new BorderLayout());
         top.add(buildHeader(), BorderLayout.NORTH);
+
+        JPanel ribbon = Theme.transparentPanel(new BorderLayout());
+        ribbon.setBorder(Theme.padding(0, Theme.SPACE_XL, Theme.SPACE_SM, Theme.SPACE_XL));
+        ribbon.add(streakBanner, BorderLayout.CENTER);
+        top.add(ribbon, BorderLayout.CENTER);
+
         top.add(buildToolbar(), BorderLayout.SOUTH);
         return top;
     }
@@ -220,16 +225,11 @@ public class MainFrame extends JFrame {
 
     private JPanel buildToolbar() {
         JButton addButton = Theme.primaryButton("Add");
-
         addButton.addActionListener(event -> addObservation());
-        editButton.addActionListener(event -> editObservation());
-        deleteButton.addActionListener(event -> deleteObservation());
 
         JPanel bar = Theme.transparentPanel(new FlowLayout(FlowLayout.CENTER, Theme.SPACE_SM, 0));
         bar.setBorder(Theme.padding(Theme.SPACE_SM, Theme.SPACE_XL, Theme.SPACE_MD, Theme.SPACE_XL));
         bar.add(addButton);
-        bar.add(editButton);
-        bar.add(deleteButton);
         bar.add(Box.createHorizontalStrut(Theme.SPACE_LG));
         bar.add(Theme.label("Filter"));
         bar.add(typeFilter);
@@ -246,8 +246,8 @@ public class MainFrame extends JFrame {
         tabs.setFont(Theme.FONT_TAB);
         tabs.setBorder(Theme.padding(Theme.SPACE_MD, Theme.SPACE_MD, 0, Theme.SPACE_MD));
         tabs.addTab("Journal", journalTable);
-        tabs.addTab("Stats", placeholder("No statistics yet", "Counts per celestial type will appear here."));
-        tabs.addTab("Streaks", placeholder("No streaks yet", "Your observation streak will appear here."));
+        tabs.addTab("Stats", statsPanel);
+        tabs.addTab("Streaks", streakPanel);
         updateTabColors(tabs);
         tabs.addChangeListener(event -> updateTabColors(tabs));
         return tabs;
@@ -258,22 +258,6 @@ public class MainFrame extends JFrame {
             boolean selected = i == tabs.getSelectedIndex();
             tabs.setForegroundAt(i, selected ? Theme.INK : Theme.INK_MUTED);
         }
-    }
-
-    private JPanel placeholder(String title, String message) {
-        PagePanel page = new PagePanel(new GridBagLayout());
-        JPanel content = Theme.transparentPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-
-        JLabel heading = Theme.heading(title);
-        heading.setAlignmentX(Component.CENTER_ALIGNMENT);
-        JLabel detail = Theme.muted(message);
-        detail.setAlignmentX(Component.CENTER_ALIGNMENT);
-        content.add(heading);
-        content.add(Box.createVerticalStrut(Theme.SPACE_SM));
-        content.add(detail);
-        page.add(content);
-        return page;
     }
 
     private JPanel buildStatusBar() {
@@ -303,14 +287,10 @@ public class MainFrame extends JFrame {
         });
     }
 
-    private void editObservation() {
-        Observation selected = journalTable.selectedObservations().stream().findFirst().orElse(null);
-        if (selected == null) {
-            return;
-        }
-        ObservationFormDialog.open(this, selected, imageManager).ifPresent(observation -> {
+    private void editObservation(Observation observation) {
+        ObservationFormDialog.open(this, observation, imageManager).ifPresent(updated -> {
             try {
-                service.update(observation);
+                service.update(updated);
             } catch (IOException e) {
                 reportStorageError("save", e);
                 return;
@@ -320,21 +300,9 @@ public class MainFrame extends JFrame {
         });
     }
 
-    private void deleteObservation() {
-        List<Observation> selected = journalTable.selectedObservations();
-        if (selected.isEmpty()) {
-            return;
-        }
-        String question = selected.size() == 1
-                ? "Delete this observation?"
-                : "Delete these " + selected.size() + " observations?";
-        int choice = JOptionPane.showConfirmDialog(this, question + "\nThis cannot be undone.",
-                "Delete observations", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return;
-        }
+    private void deleteObservation(Observation observation) {
         try {
-            service.delete(selected.stream().map(Observation::id).toList());
+            service.delete(List.of(observation.id()));
         } catch (IOException e) {
             reportStorageError("delete", e);
             return;
@@ -355,6 +323,13 @@ public class MainFrame extends JFrame {
     private void refreshData() {
         List<Observation> observations = service.all();
         journalTable.setObservations(observations);
+        statsPanel.setCounts(service.countsByType());
+
+        int currentStreak = service.currentStreak();
+        int longestStreak = service.longestStreak();
+        streakBanner.setStreaks(currentStreak, longestStreak);
+        streakPanel.setStreaks(currentStreak, longestStreak);
+
         updateFilterOptions(observations);
         refreshStatus();
     }

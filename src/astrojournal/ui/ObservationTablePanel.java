@@ -22,10 +22,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.IntConsumer;
 import java.util.regex.Pattern;
 
 public class ObservationTablePanel extends PagePanel {
@@ -102,23 +100,6 @@ public class ObservationTablePanel extends PagePanel {
 
     public int visibleRowCount() {
         return table.getRowCount();
-    }
-
-    public List<Observation> selectedObservations() {
-        int[] viewRows = table.getSelectedRows();
-        List<Observation> selected = new ArrayList<>(viewRows.length);
-        for (int viewRow : viewRows) {
-            selected.add(model.observationAt(table.convertRowIndexToModel(viewRow)));
-        }
-        return selected;
-    }
-
-    public void addSelectionListener(IntConsumer listener) {
-        table.getSelectionModel().addListSelectionListener(event -> {
-            if (!event.getValueIsAdjusting()) {
-                listener.accept(table.getSelectedRowCount());
-            }
-        });
     }
 
     public void addSortListener(Runnable listener) {
