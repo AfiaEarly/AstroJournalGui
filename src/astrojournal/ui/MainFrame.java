@@ -6,22 +6,31 @@ import astrojournal.service.ImageManager;
 import astrojournal.service.ObservationService;
 import astrojournal.ui.theme.Theme;
 
+import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.KeyStroke;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -46,6 +55,7 @@ public class MainFrame extends JFrame {
     private final JLabel streakLabel = Theme.muted("");
     private final StatsPanel statsPanel = new StatsPanel();
     private final JComboBox<String> typeFilter = new JComboBox<>();
+    private final JTextField searchField = Theme.textField(14);
     private final JToggleButton sortToggle = Theme.toggleButton("Newest first");
     private boolean updatingFilterOptions;
     private JPanel toolbar;
@@ -73,6 +83,7 @@ public class MainFrame extends JFrame {
         if (backgroundImage != null) {
             backgroundPanel.setBackgroundImage(backgroundImage);
         }
+        installSearchShortcut();
         wireJournalControls();
         refreshData();
         showCover();
@@ -84,6 +95,22 @@ public class MainFrame extends JFrame {
             refreshStatus();
         });
         journalTable.addOpenListener(this::showObservation);
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent event) {
+                applySearch();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent event) {
+                applySearch();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent event) {
+                applySearch();
+            }
+        });
         typeFilter.addActionListener(event -> {
             if (!updatingFilterOptions) {
                 journalTable.setTypeFilter(selectedTypeFilter());
@@ -99,6 +126,34 @@ public class MainFrame extends JFrame {
             refreshStatus();
         });
         syncSortToggle(true);
+    }
+
+    private void applySearch() {
+        journalTable.setSearchText(searchField.getText());
+        refreshStatus();
+    }
+
+    private void installSearchShortcut() {
+        searchField.setToolTipText("Search date, time, object, type, location, equipment or notes — Esc clears");
+        searchField.getInputMap(JComponent.WHEN_FOCUSED)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "search.clear");
+        searchField.getActionMap().put("search.clear", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                searchField.setText("");
+            }
+        });
+
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK), "search.focus");
+        getRootPane().getActionMap().put("search.focus", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                showBook();
+                searchField.requestFocusInWindow();
+                searchField.selectAll();
+            }
+        });
     }
 
     private void syncSortToggle(boolean descending) {
@@ -230,6 +285,9 @@ public class MainFrame extends JFrame {
         bar.setBorder(Theme.padding(Theme.SPACE_SM, Theme.SPACE_XL, Theme.SPACE_MD, Theme.SPACE_XL));
         bar.add(addButton);
         bar.add(Box.createHorizontalStrut(Theme.SPACE_LG));
+        bar.add(Theme.label("Search"));
+        bar.add(searchField);
+        bar.add(Box.createHorizontalStrut(Theme.SPACE_MD));
         bar.add(Theme.label("Filter"));
         bar.add(typeFilter);
         bar.add(Box.createHorizontalStrut(Theme.SPACE_MD));

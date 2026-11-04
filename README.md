@@ -32,7 +32,8 @@ java -cp bin astrojournal.Main
 1. Launch the app and click **Add Observation** on the cover.
 2. Fill in the date, time, object, and celestial type, and optionally attach a photo.
 3. Double-click a row (or press Enter) to open the record, where you can edit or delete it.
-4. Use the **Filter** and **Sort** controls above the journal, and open the **Stats** tab for type counts.
+4. Use the **Search**, **Filter**, and **Sort** controls above the journal, and open the **Stats** tab for type counts.
+   Search matches object, type, location, equipment, notes, date, or time; press Ctrl+F to focus it and Esc to clear it.
 5. Upload a background image from the cover or book view; it is remembered for next time.
 
 ## Data

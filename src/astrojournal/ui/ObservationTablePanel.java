@@ -26,6 +26,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -47,6 +48,8 @@ public class ObservationTablePanel extends PagePanel {
         }
     };
     private final DefaultRowSorter<ObservationTableModel, Integer> sorter = new TableRowSorter<>(model);
+    private String typeFilter;
+    private String searchText = "";
 
     public ObservationTablePanel() {
         super(new BorderLayout());
@@ -88,7 +91,7 @@ public class ObservationTablePanel extends PagePanel {
     private void paintEmptyState(Graphics g) {
         String message = model.getRowCount() == 0
                 ? "No observations yet \u2014 click Add to start your journal."
-                : "No observations match this filter.";
+                : "No observations match your search or filter.";
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g2.setFont(Theme.FONT_BODY);
@@ -105,12 +108,29 @@ public class ObservationTablePanel extends PagePanel {
     }
 
     public void setTypeFilter(String celestialType) {
-        if (celestialType == null || celestialType.isBlank()) {
-            sorter.setRowFilter(null);
-            return;
+        typeFilter = celestialType == null || celestialType.isBlank() ? null : celestialType;
+        applyFilter();
+    }
+
+    public void setSearchText(String query) {
+        searchText = query == null ? "" : query;
+        applyFilter();
+    }
+
+    private void applyFilter() {
+        List<RowFilter<ObservationTableModel, Integer>> filters = new ArrayList<>();
+        if (typeFilter != null) {
+            filters.add(RowFilter.regexFilter("(?i)^" + Pattern.quote(typeFilter) + "$",
+                    ObservationTableModel.COLUMN_TYPE));
         }
-        sorter.setRowFilter(RowFilter.regexFilter("(?i)^" + Pattern.quote(celestialType) + "$",
-                ObservationTableModel.COLUMN_TYPE));
+        if (!searchText.isBlank()) {
+            filters.add(new ObservationSearchFilter(searchText));
+        }
+        sorter.setRowFilter(switch (filters.size()) {
+            case 0 -> null;
+            case 1 -> filters.getFirst();
+            default -> RowFilter.andFilter(filters);
+        });
     }
 
     public void setSortDescendingByDate(boolean descending) {
