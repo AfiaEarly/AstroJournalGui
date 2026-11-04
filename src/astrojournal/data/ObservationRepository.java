@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 public class ObservationRepository {
@@ -28,10 +27,6 @@ public class ObservationRepository {
 
     public List<Observation> findAll() {
         return List.copyOf(observations);
-    }
-
-    public Optional<Observation> findById(int id) {
-        return observations.stream().filter(observation -> observation.id() == id).findFirst();
     }
 
     public Observation add(Observation observation) throws IOException {

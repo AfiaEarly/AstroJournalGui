@@ -34,8 +34,13 @@ public class ObservationCellRenderer extends DefaultTableCellRenderer {
             case ObservationTableModel.COLUMN_DATE -> DateUtil.formatDate((LocalDate) value);
             case ObservationTableModel.COLUMN_TIME -> DateUtil.formatTime((LocalTime) value);
             case ObservationTableModel.COLUMN_IMAGE -> value.toString().isBlank() ? "" : "yes";
+            case ObservationTableModel.COLUMN_NOTES -> singleLine(value.toString());
             default -> value.toString();
         };
+    }
+
+    private static String singleLine(String text) {
+        return text.replace('\n', ' ').replace('\r', ' ').strip();
     }
 
     private static Color foregroundFor(int modelColumn) {

@@ -18,6 +18,10 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -33,7 +37,15 @@ public class ObservationTablePanel extends PagePanel {
     private static final String OPEN_ACTION = "journal.open";
 
     private final ObservationTableModel model = new ObservationTableModel();
-    private final JTable table = new JTable(model);
+    private final JTable table = new JTable(model) {
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (getRowCount() == 0) {
+                paintEmptyState(g);
+            }
+        }
+    };
     private final DefaultRowSorter<ObservationTableModel, Integer> sorter = new TableRowSorter<>(model);
 
     public ObservationTablePanel() {
@@ -68,7 +80,24 @@ public class ObservationTablePanel extends PagePanel {
         scrollPane.setBorder(BorderFactory.createLineBorder(Theme.PAPER_BORDER));
         scrollPane.getVerticalScrollBar().setUnitIncrement(ROW_HEIGHT);
         add(scrollPane, BorderLayout.CENTER);
+
         table.setToolTipText("Double-click an observation to view it and its photo");
+        sorter.addRowSorterListener(event -> table.repaint());
+    }
+
+    private void paintEmptyState(Graphics g) {
+        String message = model.getRowCount() == 0
+                ? "No observations yet \u2014 click Add to start your journal."
+                : "No observations match this filter.";
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2.setFont(Theme.FONT_BODY);
+        g2.setColor(Theme.INK_MUTED);
+        FontMetrics metrics = g2.getFontMetrics();
+        int x = Math.max(Theme.SPACE_MD, (getWidth() - metrics.stringWidth(message)) / 2);
+        int y = (getHeight() + metrics.getAscent() - metrics.getDescent()) / 2;
+        g2.drawString(message, x, y);
+        g2.dispose();
     }
 
     public void setObservations(List<Observation> observations) {

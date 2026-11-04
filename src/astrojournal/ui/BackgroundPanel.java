@@ -15,7 +15,6 @@ import java.nio.file.Path;
 public class BackgroundPanel extends JPanel {
 
     private BufferedImage image;
-    private boolean overlayEnabled = true;
 
     public BackgroundPanel() {
         setOpaque(true);
@@ -24,16 +23,6 @@ public class BackgroundPanel extends JPanel {
 
     public void setBackgroundImage(Path file) {
         image = loadImage(file);
-        repaint();
-    }
-
-    public void clearBackgroundImage() {
-        image = null;
-        repaint();
-    }
-
-    public void setOverlayEnabled(boolean overlayEnabled) {
-        this.overlayEnabled = overlayEnabled;
         repaint();
     }
 
@@ -46,10 +35,8 @@ public class BackgroundPanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         drawCover(g2, image);
-        if (overlayEnabled) {
-            g2.setColor(Theme.OVERLAY);
-            g2.fillRect(0, 0, getWidth(), getHeight());
-        }
+        g2.setColor(Theme.OVERLAY);
+        g2.fillRect(0, 0, getWidth(), getHeight());
         g2.dispose();
     }
 

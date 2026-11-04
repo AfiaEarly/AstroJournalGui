@@ -48,10 +48,6 @@ public class SettingsStore {
         return properties.getProperty(key);
     }
 
-    public String get(String key, String defaultValue) {
-        return properties.getProperty(key, defaultValue);
-    }
-
     public void set(String key, String value) {
         if (value == null) {
             properties.remove(key);
