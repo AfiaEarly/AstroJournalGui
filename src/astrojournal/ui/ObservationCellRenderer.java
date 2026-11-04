@@ -22,6 +22,7 @@ public class ObservationCellRenderer extends DefaultTableCellRenderer {
         label.setFont(Theme.FONT_BODY);
         label.setForeground(selected ? Theme.INK : foregroundFor(modelColumn));
         label.setHorizontalAlignment(alignmentFor(modelColumn));
+        label.setBorder(Theme.TABLE_CELL_PADDING);
         label.setText(textFor(modelColumn, value));
         return label;
     }

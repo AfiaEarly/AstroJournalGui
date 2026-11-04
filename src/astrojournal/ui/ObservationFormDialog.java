@@ -50,7 +50,7 @@ public class ObservationFormDialog extends JDialog {
     private final int id;
 
     private final JTextField dateField = Theme.textField(10);
-    private final JTextField timeField = Theme.textField(6);
+    private final JTextField timeField = Theme.textField(8);
     private final JTextField objectField = Theme.textField(18);
     private final JComboBox<String> typeCombo = new JComboBox<>();
     private final JTextField customTypeField = Theme.textField(12);
@@ -318,13 +318,13 @@ public class ObservationFormDialog extends JDialog {
     private LocalTime parseTime(List<String> errors) {
         String text = timeField.getText().strip();
         if (text.isEmpty()) {
-            errors.add("Time is required (HH:mm).");
+            errors.add("Time is required (h:mm AM/PM).");
             return null;
         }
         try {
             return DateUtil.parseTime(text);
         } catch (DateTimeParseException e) {
-            errors.add("\"" + text + "\" is not a valid time. Use HH:mm.");
+            errors.add("\"" + text + "\" is not a valid time. Use h:mm AM/PM.");
             return null;
         }
     }

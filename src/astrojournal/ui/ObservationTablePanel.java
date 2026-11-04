@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 public class ObservationTablePanel extends PagePanel {
 
     private static final int ROW_HEIGHT = 30;
-    private static final int[] COLUMN_WIDTHS = { 105, 60, 132, 92, 98, 108, 50, 142 };
+    private static final int[] COLUMN_WIDTHS = { 105, 80, 118, 92, 98, 108, 50, 136 };
     private static final String OPEN_ACTION = "journal.open";
 
     private final ObservationTableModel model = new ObservationTableModel();

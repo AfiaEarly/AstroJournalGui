@@ -3,14 +3,25 @@ package astrojournal.util;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 
 public final class DateUtil {
 
     public static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    public static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+
+    private static final DateTimeFormatter STORAGE_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter DISPLAY_TIME_FORMAT = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
+    private static final List<DateTimeFormatter> TIME_INPUT_FORMATS = List.of(
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("h:mm a")
+                    .toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("h:mma")
+                    .toFormatter(Locale.ENGLISH),
+            STORAGE_TIME_FORMAT);
 
     private DateUtil() {
     }
@@ -20,7 +31,15 @@ public final class DateUtil {
     }
 
     public static LocalTime parseTime(String text) {
-        return LocalTime.parse(text, TIME_FORMAT);
+        DateTimeParseException failure = null;
+        for (DateTimeFormatter format : TIME_INPUT_FORMATS) {
+            try {
+                return LocalTime.parse(text, format);
+            } catch (DateTimeParseException e) {
+                failure = e;
+            }
+        }
+        throw failure;
     }
 
     public static String formatDate(LocalDate date) {
@@ -28,7 +47,7 @@ public final class DateUtil {
     }
 
     public static String formatTime(LocalTime time) {
-        return time == null ? "" : time.format(TIME_FORMAT);
+        return time == null ? "" : time.format(DISPLAY_TIME_FORMAT);
     }
 
     public static long dayGap(LocalDate from, LocalDate to) {

@@ -76,6 +76,8 @@ public final class Theme {
     private static final Border FIELD_BORDER = BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(PAPER_BORDER), FIELD_PADDING);
 
+    public static final Border TABLE_CELL_PADDING = new EmptyBorder(0, SPACE_SM, 0, SPACE_SM);
+
     private Theme() {
     }
 
