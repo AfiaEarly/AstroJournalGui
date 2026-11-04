@@ -13,7 +13,6 @@ import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -24,14 +23,11 @@ import java.util.Map;
 public class StatsPanel extends PagePanel {
 
     private static final int TYPE_WIDTH = 170;
-    private static final int BAR_WIDTH = 220;
-    private static final int BAR_HEIGHT = 10;
     private static final int COUNT_WIDTH = 70;
     private static final int SHARE_WIDTH = 55;
 
     private final JPanel table = Theme.transparentPanel(new GridBagLayout());
     private final JPanel card = Theme.paperPanel(new BorderLayout());
-    private final JPanel cardRow = Theme.transparentPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
     private final JLabel summaryLabel = Theme.muted("");
 
     public StatsPanel() {
@@ -40,23 +36,21 @@ public class StatsPanel extends PagePanel {
         table.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Theme.PAPER_BORDER),
-                Theme.padding(Theme.SPACE_XS, Theme.SPACE_MD, Theme.SPACE_XS, Theme.SPACE_MD)));
+                Theme.padding(Theme.SPACE_SM, Theme.SPACE_MD, Theme.SPACE_SM, Theme.SPACE_MD)));
         card.add(table, BorderLayout.CENTER);
 
-        cardRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        cardRow.add(card);
+        JPanel cardHolder = Theme.transparentPanel(new BorderLayout());
+        cardHolder.add(card, BorderLayout.NORTH);
 
-        JPanel content = Theme.transparentPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.add(buildHeader());
-        content.add(Box.createVerticalStrut(Theme.SPACE_SM));
-        content.add(cardRow);
+        JPanel content = Theme.transparentPanel(new BorderLayout(0, Theme.SPACE_SM));
+        content.add(buildHeader(), BorderLayout.NORTH);
+        content.add(cardHolder, BorderLayout.CENTER);
 
         JScrollPane scrollPane = new JScrollPane(content);
         scrollPane.setBorder(null);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(BAR_HEIGHT * 3);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(Theme.SPACE_XL * 3);
         add(scrollPane, BorderLayout.CENTER);
 
         setCounts(Map.of());
@@ -83,7 +77,7 @@ public class StatsPanel extends PagePanel {
         summaryLabel.setText(entries.isEmpty()
                 ? "No observations yet — your counts will appear here."
                 : summaryText(total, entries.size()) + ", most observed first.");
-        cardRow.setVisible(!entries.isEmpty());
+        card.setVisible(!entries.isEmpty());
         table.revalidate();
         table.repaint();
     }
@@ -91,7 +85,6 @@ public class StatsPanel extends PagePanel {
     private JPanel buildHeader() {
         JPanel header = Theme.transparentPanel();
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel heading = Theme.heading("Observation stats");
         heading.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -104,16 +97,15 @@ public class StatsPanel extends PagePanel {
     }
 
     private void addHeaderRow(int row) {
-        addCell(Theme.tableHeader("Celestial type"), row, 0, TYPE_WIDTH, GridBagConstraints.WEST);
-        addCell(rightAligned(Theme.tableHeader("Count")), row, 2, COUNT_WIDTH, GridBagConstraints.EAST);
-        addCell(rightAligned(Theme.tableHeader("Share")), row, 3, SHARE_WIDTH, GridBagConstraints.EAST);
+        addCell(Theme.tableHeader("Celestial type"), row, 0, TYPE_WIDTH, GridBagConstraints.WEST, 1.0);
+        addCell(rightAligned(Theme.tableHeader("Count")), row, 1, COUNT_WIDTH, GridBagConstraints.EAST);
+        addCell(rightAligned(Theme.tableHeader("Share")), row, 2, SHARE_WIDTH, GridBagConstraints.EAST);
     }
 
     private void addDataRow(int row, String type, int count, int total) {
-        addCell(Theme.label(type), row, 0, TYPE_WIDTH, GridBagConstraints.WEST);
-        addCell(buildBar(count, total), row, 1, BAR_WIDTH, GridBagConstraints.WEST);
-        addCell(rightAligned(Theme.label(String.valueOf(count))), row, 2, COUNT_WIDTH, GridBagConstraints.EAST);
-        addCell(rightAligned(Theme.muted(shareText(count, total))), row, 3, SHARE_WIDTH, GridBagConstraints.EAST);
+        addCell(Theme.label(type), row, 0, TYPE_WIDTH, GridBagConstraints.WEST, 1.0);
+        addCell(rightAligned(Theme.label(String.valueOf(count))), row, 1, COUNT_WIDTH, GridBagConstraints.EAST);
+        addCell(rightAligned(Theme.muted(shareText(count, total))), row, 2, SHARE_WIDTH, GridBagConstraints.EAST);
     }
 
     private void addRule(int row) {
@@ -132,6 +124,10 @@ public class StatsPanel extends PagePanel {
     }
 
     private void addCell(Component cell, int row, int column, int width, int anchor) {
+        addCell(cell, row, column, width, anchor, 0);
+    }
+
+    private void addCell(Component cell, int row, int column, int width, int anchor, double weightX) {
         Dimension preferred = cell.getPreferredSize();
         cell.setPreferredSize(new Dimension(width, preferred.height));
 
@@ -139,22 +135,10 @@ public class StatsPanel extends PagePanel {
         constraints.gridx = column;
         constraints.gridy = row;
         constraints.anchor = anchor;
+        constraints.weightx = weightX;
+        constraints.fill = weightX > 0 ? GridBagConstraints.HORIZONTAL : GridBagConstraints.NONE;
         constraints.insets = new Insets(0, 0, Theme.SPACE_XS, Theme.SPACE_MD);
         table.add(cell, constraints);
-    }
-
-    private JPanel buildBar(int count, int total) {
-        int filled = Math.max(6, (int) Math.round(count * (double) BAR_WIDTH / total));
-
-        JPanel fill = new JPanel();
-        fill.setBackground(Theme.ACCENT);
-        fill.setPreferredSize(new Dimension(filled, BAR_HEIGHT));
-
-        JPanel track = new JPanel(new BorderLayout());
-        track.setBackground(Theme.PAPER_SHADE);
-        track.setPreferredSize(new Dimension(BAR_WIDTH, BAR_HEIGHT));
-        track.add(fill, BorderLayout.WEST);
-        return track;
     }
 
     private JLabel rightAligned(JLabel label) {

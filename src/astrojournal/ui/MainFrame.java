@@ -43,9 +43,8 @@ public class MainFrame extends JFrame {
     private final CardLayout cards = new CardLayout();
     private final JLabel statusLabel = Theme.muted("");
     private final ObservationTablePanel journalTable = new ObservationTablePanel();
-    private final StreakBanner streakBanner = new StreakBanner();
+    private final JLabel streakLabel = Theme.muted("");
     private final StatsPanel statsPanel = new StatsPanel();
-    private final StreakPanel streakPanel = new StreakPanel();
     private final JComboBox<String> typeFilter = new JComboBox<>();
     private final JToggleButton sortToggle = Theme.toggleButton("Newest first");
     private boolean updatingFilterOptions;
@@ -188,7 +187,7 @@ public class MainFrame extends JFrame {
 
         JPanel ribbon = Theme.transparentPanel(new BorderLayout());
         ribbon.setBorder(Theme.padding(0, Theme.SPACE_XL, Theme.SPACE_SM, Theme.SPACE_XL));
-        ribbon.add(streakBanner, BorderLayout.CENTER);
+        ribbon.add(streakLabel, BorderLayout.WEST);
         top.add(ribbon, BorderLayout.CENTER);
 
         top.add(buildToolbar(), BorderLayout.SOUTH);
@@ -247,7 +246,6 @@ public class MainFrame extends JFrame {
         tabs.setBorder(Theme.padding(Theme.SPACE_MD, Theme.SPACE_MD, 0, Theme.SPACE_MD));
         tabs.addTab("Journal", journalTable);
         tabs.addTab("Stats", statsPanel);
-        tabs.addTab("Streaks", streakPanel);
         updateTabColors(tabs);
         tabs.addChangeListener(event -> updateTabColors(tabs));
         return tabs;
@@ -326,12 +324,14 @@ public class MainFrame extends JFrame {
         statsPanel.setCounts(service.countsByType());
 
         int currentStreak = service.currentStreak();
-        int longestStreak = service.longestStreak();
-        streakBanner.setStreaks(currentStreak, longestStreak);
-        streakPanel.setStreaks(currentStreak, longestStreak);
+        streakLabel.setText(streakText(currentStreak));
 
         updateFilterOptions(observations);
         refreshStatus();
+    }
+
+    private static String streakText(int days) {
+        return "Current streak: " + (days == 1 ? "1 day" : days + " days");
     }
 
     private void updateFilterOptions(List<Observation> observations) {
